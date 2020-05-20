@@ -1,8 +1,6 @@
 # Parser to read NEM12 data 
 Parser for meter reading information from NEM12.
 
-### Task
-
 # SimpleNem12Parser
 
 ## Task
