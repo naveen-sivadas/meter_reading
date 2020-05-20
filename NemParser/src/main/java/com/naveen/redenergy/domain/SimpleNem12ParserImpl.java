@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StopWatch;
 import org.springframework.util.StringUtils;
 
 import com.naveen.redenergy.units.EnergyUnit;
@@ -34,11 +35,15 @@ public class SimpleNem12ParserImpl implements SimpleNem12Parser {
 	private static final String FINAL_OFSFET = "900";
 	private static final String DELIMITER = ",";
 	private static final String DATE_FORMATTER_PATERN = "yyyyMMdd";
-	private short recordBoundaries = 0;
 	private final List<MeterRead> meterRecordsList = new ArrayList<>();
+	private final StopWatch stopWatch = new StopWatch("Performance of NEM Parser");
+	private int numberOfRecords=0;
+	private short recordBoundaries = 0;
+
 
 	@Override
 	public Collection<MeterRead> parseSimpleNem12(File simpleNem12File) {
+		stopWatch.start();
 		try (Stream<String> stream = Files.lines(Paths.get(simpleNem12File.getAbsolutePath()))) {
 			stream.forEach(this::processRecord);
 		} catch (IOException exception) {
@@ -50,7 +55,8 @@ public class SimpleNem12ParserImpl implements SimpleNem12Parser {
 			meterRecordsList.clear();
 			throw new IllegalArgumentException("Beginning/End of record not found.");
 		}
-
+		stopWatch.stop();
+		LOGGER.info("A total of {} rows were processed within {} milliseconds",numberOfRecords,stopWatch.getTotalTimeMillis());
 		return meterRecordsList;
 	}
 
@@ -76,7 +82,7 @@ public class SimpleNem12ParserImpl implements SimpleNem12Parser {
 		default:
 			LOGGER.info("Invalid Record Type encountered", split[0]);
 		}
-
+		numberOfRecords +=1;
 	}
 
 	/**
@@ -91,7 +97,7 @@ public class SimpleNem12ParserImpl implements SimpleNem12Parser {
 			meterRecordsList.get(meterRecordsList.size() - 1).appendVolume(readingDate,
 					new MeterVolume(new BigDecimal(reading), Quality.valueOf(quality)));
 		} catch (DateTimeParseException exception) {
-			LOGGER.info("Error parsing date in record, the record " + date + " will not be processed", exception);
+			LOGGER.info("Error parsing date in record, the record at row [{}]  will not be processed",numberOfRecords);
 		}
 
 	}
